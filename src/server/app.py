@@ -110,13 +110,34 @@ def run_pipeline_stage(run_id: str, version: int, stage_name: str, video_id: str
         export_dir = None
         if stage_name != "planning":
              # Try to find existing export dir
-             search_root = os.path.join(BASE_DIR, "exports", video_id)
+             # Try to find existing export dir
+             # Search logic: exports/*/run_{run_id}/v{version}
+             search_root = os.path.join(BASE_DIR, "exports")
+             
+             # Fallback: if video_id is known, look there first
+             if os.path.exists(os.path.join(search_root, video_id)):
+                  search_root = os.path.join(search_root, video_id)
+
              if os.path.exists(search_root):
-                 for date_folder in os.listdir(search_root):
-                     cand = os.path.join(search_root, date_folder, f"run_{run_id}", f"v{version}")
-                     if os.path.exists(cand):
-                         export_dir = cand
+                 found = false
+                 for root, dirs, files in os.walk(search_root):
+                     if f"run_{run_id}" in root and root.endswith(f"/v{version}"):
+                         export_dir = root
+                         found = True
                          break
+                 
+                 if not found and os.path.exists(search_root):
+                     # Try non-recursive one-level deep if walk is too slow/deep
+                     # Structure: exports/VIDEO_ID/DATE_HASH/run_RUN-ID/v1
+                     # If we are at VIDEO_ID, look at children
+                     for item in os.listdir(search_root):
+                         path = os.path.join(search_root, item)
+                         if os.path.isdir(path):
+                             # Check DATE_HASH folders
+                             cand = os.path.join(path, f"run_{run_id}", f"v{version}")
+                             if os.path.exists(cand):
+                                 export_dir = cand
+                                 break
         
         db.update_run_status(run_id, version, stage_name.upper(), "running")
         
