@@ -22,8 +22,23 @@ class AudioAligner:
         import subprocess
         import shutil
         
-        ffprobe_cmd = shutil.which("ffprobe") or "ffprobe"
+        ffprobe_cmd = shutil.which("ffprobe")
         
+        # Fallback to common locations if not found in PATH
+        if not ffprobe_cmd:
+            common_paths = ["/usr/bin/ffprobe", "/usr/local/bin/ffprobe", "/bin/ffprobe"]
+            for path in common_paths:
+                if os.path.exists(path):
+                    ffprobe_cmd = path
+                    break
+        
+        if not ffprobe_cmd:
+            # Last resort: just use "ffprobe" string and hope
+            print("WARNING: Could not find ffprobe in PATH or common locations. Using default 'ffprobe'.")
+            ffprobe_cmd = "ffprobe"
+        else:
+            print(f"DEBUG: Using ffprobe at: {ffprobe_cmd}")
+
         try:
             cmd = [
                 ffprobe_cmd, 
