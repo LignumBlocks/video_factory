@@ -1,0 +1,8 @@
+{
+  "name": "The Cockpit",
+  "description": "A high-end mission-control interface for AI video production pipelines, featuring granular control over shots, keyframes, and video generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

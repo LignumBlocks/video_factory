@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+
+# Database
+pipeline.db
+pipeline.db-journal
+*.db
+*.db-journal
+
+# Logs
+*.log
+trace.log
+
+# Windows metadata
+*:Zone.Identifier
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Project-specific: Exports & Assets
+exports/
+runs/
+stage*.txt
+*_report.txt
+*_audit.txt
+*_debug*.txt
+*_test.txt
+
+# Frontend (Next.js / Vite)
+src/gui/node_modules/
+src/gui/.next/
+src/gui/out/
+src/gui/dist/
+src/gui/.vite/
+src/gui/.turbo/
+src/gui/yarn-error.log
+src/gui/npm-debug.log*
+src/gui/pnpm-debug.log*
+src/ui/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Large files / Archives
+*.zip
+*.tar.gz
+*.rar
+src/ui.zip
