@@ -1,0 +1,26 @@
+cockpit.orquix.com {
+	encode zstd gzip
+
+	# API Backend
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8001
+	}
+
+	# Assets generados (Imágenes/Videos)
+	handle /exports/* {
+		root * /var/www/FinanceVideoPlatform
+		file_server
+	}
+
+	# Frontend UI (SPA)
+	handle {
+		root * /var/www/FinanceVideoPlatform/src/gui/dist
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output file /var/log/caddy/cockpit_access.log
+		level INFO
+	}
+}
