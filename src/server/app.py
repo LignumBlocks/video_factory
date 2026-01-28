@@ -119,7 +119,7 @@ def run_pipeline_stage(run_id: str, version: int, stage_name: str, video_id: str
                   search_root = os.path.join(search_root, video_id)
 
              if os.path.exists(search_root):
-                 found = false
+                 found = False
                  for root, dirs, files in os.walk(search_root):
                      if f"run_{run_id}" in root and root.endswith(f"/v{version}"):
                          export_dir = root
