@@ -7,14 +7,10 @@ set -e
 
 echo "🚀 Starting FinanceVideoPlatform VPS Setup..."
 
-# 1. System Updates & Python 3.10 PPA
+# 1. System Updates
 echo "📦 Updating system packages..."
 apt update && apt upgrade -y
-apt install -y software-properties-common
-add-apt-repository -y ppa:deadsnakes/ppa
-apt update
-
-apt install -y python3.10 python3.10-venv python3-pip git curl wget ffmpeg sqlite3 build-essential libssl-dev
+apt install -y python3 python3-venv python3-pip git curl wget ffmpeg sqlite3 build-essential libssl-dev
 
 # 2. Node.js Installation
 echo "🟢 Installing Node.js 20..."
@@ -27,7 +23,7 @@ echo "📂 Project Root: $PROJECT_ROOT"
 
 # 4. Python Backend Setup
 echo "🐍 Setting up Python Virtual Environment..."
-python3.10 -m venv venv
+python3 -m venv venv
 ./venv/bin/pip install --upgrade pip
 ./venv/bin/pip install -r requirements.txt
 
