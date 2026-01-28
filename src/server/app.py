@@ -303,4 +303,5 @@ def generate_shot_clips(run_id: str, shot_id: str, version: int = 1, video_id: s
 if __name__ == "__main__":
     import uvicorn
     print(f"Starting API Server. DB Path: {DB_PATH}")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
