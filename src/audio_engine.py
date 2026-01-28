@@ -20,9 +20,13 @@ class AudioAligner:
         Uses ffprobe to get precise audio duration.
         """
         import subprocess
+        import shutil
+        
+        ffprobe_cmd = shutil.which("ffprobe") or "ffprobe"
+        
         try:
             cmd = [
-                "ffprobe", 
+                ffprobe_cmd, 
                 "-v", "error", 
                 "-show_entries", "format=duration", 
                 "-of", "default=noprint_wrappers=1:nokey=1", 
