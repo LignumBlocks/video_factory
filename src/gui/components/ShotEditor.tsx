@@ -61,12 +61,13 @@ export const ShotEditor: React.FC<ShotEditorProps> = ({ runId, runName }) => {
 
       // Find prompts in assets - they're stored as type PROMPT with roles start_ref/end_ref
       const promptAssets = shot.assets.filter((a: any) => a.type === 'PROMPT');
-      let prompts = undefined;
+      // Use backend-provided prompts if available, otherwise try to parse from assets
+      let prompts = shot.prompts;
 
-      if (promptAssets.length > 0) {
+      if (!prompts && promptAssets.length > 0) {
         try {
           // Find start and end prompts
-          const startPromptAsset = promptAssets.find((a: any) => a.role === 'start_ref');
+          const startPromptAsset = promptAssets.find((a: any) => a.role === 'image_prompt' || a.role === 'start_ref');
           const endPromptAsset = promptAssets.find((a: any) => a.role === 'end_ref');
 
           let image_a = '';
@@ -74,17 +75,24 @@ export const ShotEditor: React.FC<ShotEditorProps> = ({ runId, runName }) => {
 
           if (startPromptAsset && startPromptAsset.metadata) {
             const startMeta = JSON.parse(startPromptAsset.metadata);
-            image_a = startMeta.prompt || '';
+            image_a = startMeta.text || startMeta.prompt || '';
           }
 
           if (endPromptAsset && endPromptAsset.metadata) {
             const endMeta = JSON.parse(endPromptAsset.metadata);
-            image_b = endMeta.prompt || '';
+            image_b = endMeta.text || endMeta.prompt || '';
           }
 
           // Extract video prompt from shot metadata (metaphor + camera)
           let video = '';
-          if (shot.metaphor && camera) {
+          // Check for video prompt asset first
+          const videoPromptAsset = promptAssets.find((a: any) => a.role === 'video_prompt');
+          if (videoPromptAsset && videoPromptAsset.metadata) {
+            const videoMeta = JSON.parse(videoPromptAsset.metadata);
+            video = videoMeta.text || videoMeta.prompt || '';
+          }
+
+          if (!video && shot.metaphor && camera) {
             const cameraStr = typeof camera === 'string' ? camera : (camera.movement || 'static');
             video = `${shot.metaphor}, ${cameraStr} movement`;
           }

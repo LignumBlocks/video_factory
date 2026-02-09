@@ -7,12 +7,11 @@ from .models import AlignmentSource, AlignmentStats
 
 class AudioAligner:
     def __init__(self, source: AlignmentSource = AlignmentSource.FORCED_ALIGNMENT):
+        # STRICT NO-MOCK POLICY enforced
         if os.environ.get("FORCE_MOCK_ALIGNMENT") == "1":
-            self.source = AlignmentSource.MOCK_PROPORTIONAL
-            print("WARNING: FORCE_MOCK_ALIGNMENT env var detected. Using MOCK_PROPORTIONAL.")
-        else:
-            self.source = source
-        
+             raise RuntimeError("Mock Alignment is strictly forbidden by policy. Remove FORCE_MOCK_ALIGNMENT env var.")
+            
+        self.source = source
         self.api_key = os.environ.get("OPENAI_API_KEY", "")
 
     def get_audio_duration(self, audio_path: str) -> float:
@@ -51,49 +50,7 @@ class AudioAligner:
             return float(result.stdout.strip())
         except Exception as e:
             print(f"Error getting duration for {audio_path}: {e}")
-            # Fallback handling? For blocker, we explicitly want validation.
             raise RuntimeError(f"Could not check audio duration: {e}")
-
-
-    def _fallback_mock_align(self, script_text: str, audio_path: str) -> Tuple[List[Dict], AlignmentStats]:
-        """SAME logic as mocked v1, but marks source as MOCK_PROPORTIONAL"""
-        import re
-        total_duration = 60.0 # Default Mock
-        
-        # Try to get real duration if file exists
-        if os.path.exists(audio_path):
-            try:
-                real_dur = self.get_audio_duration(audio_path)
-                if real_dur > 0:
-                    total_duration = real_dur
-                    print(f"Fallback Mock: Using REAL audio duration: {total_duration}s")
-            except Exception as e:
-                print(f"Warning: Could not get duration for fallback: {e}")
-        
-        beats = re.split(r'(?<=[.!?])\s+', script_text)
-        beats = [b.strip() for b in beats if b.strip()]
-        total_chars = sum(len(b) for b in beats)
-        
-        segments = []
-        current_time = 0.0
-        for i, b in enumerate(beats):
-            dur = total_duration * (len(b) / total_chars)
-            segments.append({
-                "text": b,
-                "start": float(f"{current_time:.3f}"),
-                "end": float(f"{current_time + dur:.3f}")
-            })
-            current_time += dur
-            
-        stats = AlignmentStats(
-            source=AlignmentSource.MOCK_PROPORTIONAL,
-            max_drift_s=0.0,
-            gap_count=0,
-            coverage_pct=100.0,
-            confidence_avg=1.0,
-            fallback_used=True
-        )
-        return segments, stats
 
     @retry(
         stop=stop_after_attempt(3), 
@@ -225,22 +182,12 @@ class AudioAligner:
         with open(script_path, 'r', encoding='utf-8') as f:
             script_text = f.read()
 
-        # Decide Mode
-        # If API KEY present -> Use Real Whisper
-        # Else -> Fallback
-        use_real = bool(os.environ.get("OPENAI_API_KEY")) and self.source != AlignmentSource.MOCK_PROPORTIONAL
-        
-        if use_real:
-            # Update key from env just in case
-            self.api_key = os.environ.get("OPENAI_API_KEY")
-            try:
-                return self._real_whisper_align(script_text, audio_path)
-            except Exception as e:
-                print(f"CRITICAL: Real Alignment Failed: {e}")
-                if self.source == AlignmentSource.FORCED_ALIGNMENT:
-                    raise e
-                print("Falling back to Mock Alignment...")
-                return self._fallback_mock_align(script_text, audio_path)
-        else:
-            print("No OPENAI_API_KEY found or Mock Mode forced. Using Mock Alignment.")
-            return self._fallback_mock_align(script_text, audio_path)
+        self.api_key = os.environ.get("OPENAI_API_KEY")
+        if not self.api_key:
+            raise RuntimeError("CRITICAL: OPENAI_API_KEY is missing. Mock alignment is forbidden. Please provide a valid API Key.")
+            
+        try:
+            return self._real_whisper_align(script_text, audio_path)
+        except Exception as e:
+            print(f"CRITICAL: Real Alignment Failed: {e}")
+            raise RuntimeError(f"Alignment failed and fallback is forbidden: {e}")

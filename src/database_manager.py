@@ -78,9 +78,12 @@ class DatabaseManager:
                 metadata TEXT, -- JSON
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 is_selected BOOLEAN DEFAULT 0,
+                cache_key TEXT, -- SHA256 hash of inputs
                 FOREIGN KEY (shot_id) REFERENCES shots (shot_id)
             )
         ''')
+        
+
         
         # 4. RUN_STATUS Table
         cursor.execute('''
@@ -98,6 +101,26 @@ class DatabaseManager:
         ''')
 
         # Migrations for run_status
+        try:
+            cursor.execute("ALTER TABLE assets ADD COLUMN cache_key TEXT")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_cache_key ON assets(cache_key)")
+        except sqlite3.OperationalError:
+            pass # Already exists
+
+        conn.commit()
+        cursor.close()
+
+    def find_asset_by_cache_key(self, cache_key: str):
+        """Returns the first asset matching the cache key."""
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM assets WHERE cache_key = ? LIMIT 1", (cache_key,))
+        row = cursor.fetchone()
+        
+        conn.close()
+        return dict(row) if row else None
         try:
             cursor.execute("ALTER TABLE run_status ADD COLUMN progress_current INTEGER DEFAULT 0")
         except sqlite3.OperationalError: pass
@@ -212,6 +235,22 @@ class DatabaseManager:
             assets = [dict(row) for row in cursor.fetchall()]
             shot['assets'] = assets
             
+            # Populate 'prompts' field for GUI
+            prompts = {}
+            for asset in assets:
+                if asset['type'] == 'PROMPT':
+                    try:
+                        meta = json.loads(asset['metadata'])
+                        text = meta.get('text', '')
+                        
+                        if asset['role'] == 'image_prompt':
+                            prompts['image_a'] = text
+                        elif asset['role'] == 'video_prompt':
+                            prompts['video'] = text
+                    except:
+                        pass
+            shot['prompts'] = prompts
+            
         conn.close()
         return shots
     
@@ -240,6 +279,22 @@ class DatabaseManager:
         cursor.execute("SELECT * FROM assets WHERE shot_id = ?", (shot_id,))
         assets = [dict(row) for row in cursor.fetchall()]
         shot['assets'] = assets
+        
+        # Populate 'prompts' field for GUI
+        prompts = {}
+        for asset in assets:
+            if asset['type'] == 'PROMPT':
+                try:
+                    meta = json.loads(asset['metadata'])
+                    text = meta.get('text', '')
+                    
+                    if asset['role'] == 'image_prompt':
+                        prompts['image_a'] = text
+                    elif asset['role'] == 'video_prompt':
+                        prompts['video'] = text
+                except:
+                    pass
+        shot['prompts'] = prompts
         
         conn.close()
         return shot

@@ -51,7 +51,7 @@ class NanobananaClient:
         input_payload = {
             "prompt": req.prompt,
             "aspect_ratio": getattr(req, 'aspect_ratio', "16:9"),  # Default 16:9
-            "resolution": "1K",  # Default 1K
+            "resolution": getattr(req, 'resolution', "1K"),  # User defined quality
             "output_format": "png"
         }
         

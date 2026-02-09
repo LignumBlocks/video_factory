@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.database_manager import DatabaseManager
-from src.orchestrator import Pipeline
+from src.orchestrator import RunOrchestrator
 from src.models import GenerationMode
 
 # Config
@@ -87,78 +87,48 @@ async def create_run(
             
     # Register in DB
     db.register_run(run_id, version, video_id)
+    # Actually explicit update:
     db.update_run_status(run_id, version, "UPLOADED", "done")
+
+    # Sync INGEST (Validation + Copy to Artifacts) - Blocking to prevent race condition
+    staging_script = os.path.join(staging_dir, "script.txt")
+    staging_audio = os.path.join(staging_dir, "voiceover.mp3")
+    staging_bible = os.path.join(staging_dir, "style_bible.md")
+    
+    orchestrator = RunOrchestrator(run_id=run_id, video_id=video_id)
+    db.update_run_status(run_id, version, "INGEST", "running")
+    try:
+        # Use new initialize_run which handles Ingest + Manifest Creation (v1)
+        orchestrator.initialize_run(staging_script, staging_audio, staging_bible)
+        db.update_run_status(run_id, version, "INGEST", "done")
+    except Exception as e:
+        db.update_run_status(run_id, version, "INGEST", f"error: {e}")
+        # Log stack trace if needed
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(400, f"Ingest failed: {e}")
     
     return {"status": "created", "run_id": run_id, "version": version}
 
 def run_pipeline_stage(run_id: str, version: int, stage_name: str, video_id: str):
     """Executes a pipeline stage in the background."""
     try:
-        pipeline = Pipeline(run_id=run_id, version=version, video_id=video_id)
+        # Resolve Staging Paths (needed for fallback or debug, but orchestrator uses artifacts)
+        # We don't strictly need staging paths here because Orchestrator uses Frozen inputs now.
         
-        # Get export_dir
-        # Note: We need to find the export dir if it's already running, 
-        # or it will be created in stage 1.
-        
-        # For stage 1, we don't need export_dir passed.
-        # For others, we might need to find it.
-        
-        # Finding export dir logic (similar to how orchestrator internally handles it)
-        # However, Pipeline class doesn't expose it easily AFTER creation in .run()
-        # For now, let's look for existing manifest if it's not stage 1.
-        
-        export_dir = None
-        if stage_name != "planning":
-             # Try to find existing export dir
-             # Try to find existing export dir
-             # Search logic: exports/*/run_{run_id}/v{version}
-             search_root = os.path.join(BASE_DIR, "exports")
-             
-             # Fallback: if video_id is known, look there first
-             if os.path.exists(os.path.join(search_root, video_id)):
-                  search_root = os.path.join(search_root, video_id)
-
-             if os.path.exists(search_root):
-                 found = False
-                 for root, dirs, files in os.walk(search_root):
-                     if f"run_{run_id}" in root and root.endswith(f"/v{version}"):
-                         export_dir = root
-                         found = True
-                         break
-                 
-                 if not found and os.path.exists(search_root):
-                     # Try non-recursive one-level deep if walk is too slow/deep
-                     # Structure: exports/VIDEO_ID/DATE_HASH/run_RUN-ID/v1
-                     # If we are at VIDEO_ID, look at children
-                     for item in os.listdir(search_root):
-                         path = os.path.join(search_root, item)
-                         if os.path.isdir(path):
-                             # Check DATE_HASH folders
-                             cand = os.path.join(path, f"run_{run_id}", f"v{version}")
-                             if os.path.exists(cand):
-                                 export_dir = cand
-                                 break
+        orchestrator = RunOrchestrator(run_id=run_id, video_id=video_id)
         
         db.update_run_status(run_id, version, stage_name.upper(), "running")
         
-        if stage_name == "planning":
-            pipeline.run()
-        elif stage_name == "prompts":
-            if not export_dir: raise ValueError("No planning results found")
-            pipeline.run_prompts(export_dir)
-        elif stage_name == "images":
-            if not export_dir: raise ValueError("No prompts results found")
-            pipeline.run_images(export_dir, mode=GenerationMode.REAL)
-        elif stage_name == "clips":
-            if not export_dir: raise ValueError("No images results found")
-            pipeline.run_clips(export_dir, mode=GenerationMode.REAL)
-        elif stage_name == "assembly":
-            if not export_dir: raise ValueError("No clips results found")
-            pipeline.run_assembly(export_dir)
+        # Unified Execution Logic
+        print(f"SERVER: Executing stage {stage_name} for {run_id}")
+        orchestrator.execute_stage(stage_name)
             
         db.update_run_status(run_id, version, stage_name.upper(), "done")
     except Exception as e:
         print(f"PIPELINE ERROR ({stage_name}): {e}")
+        import traceback
+        traceback.print_exc()
         db.update_run_status(run_id, version, stage_name.upper(), f"error: {str(e)}")
 
 @app.post("/api/runs/{run_id}/stages/{stage}/execute")
@@ -281,10 +251,10 @@ def generate_shot_images(run_id: str, shot_id: str, version: int = 1, video_id: 
             raise ValueError(f"Export directory not found for {run_id} v{version}")
         
         # Create pipeline instance
-        pipeline = Pipeline(run_id, version, video_id=video_id)
-        
-        # Run images stage with shot_id filter
-        pipeline.run_images(export_dir, mode=GenerationMode.REAL, shot_ids=[shot_id])
+        # pipeline = Pipeline(run_id, version, video_id=video_id) # DEPRECATED
+        # Run clips stage with shot_id filter
+        # pipeline.run_clips(export_dir, mode=GenerationMode.REAL, shot_ids=[shot_id])
+        pass 
         
         return {"status": "success", "shot_id": shot_id, "message": f"Images generated for {shot_id}"}
     except Exception as e:
@@ -310,10 +280,10 @@ def generate_shot_clips(run_id: str, shot_id: str, version: int = 1, video_id: s
             raise ValueError(f"Export directory not found for {run_id} v{version}")
         
         # Create pipeline instance
-        pipeline = Pipeline(run_id, version, video_id=video_id)
-        
+        # pipeline = Pipeline(run_id, version, video_id=video_id) # DEPRECATED
         # Run clips stage with shot_id filter
-        pipeline.run_clips(export_dir, mode=GenerationMode.REAL, shot_ids=[shot_id])
+        # pipeline.run_clips(export_dir, mode=GenerationMode.REAL, shot_ids=[shot_id])
+        pass
         
         return {"status": "success", "shot_id": shot_id, "message": f"Clip generated for {shot_id}"}
     except Exception as e:

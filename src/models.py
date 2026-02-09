@@ -126,7 +126,8 @@ class NanobananaRequest(BaseModel):
     
     # Output control
     seed: int
-    aspect_ratio: str = "16:9"  # Default 16:9 según Kie.ai
+    aspect_ratio: str = "16:9"
+    resolution: str = "1K" # Default 1K (User controlled quality)
 
 
 class VeoRequest(BaseModel):

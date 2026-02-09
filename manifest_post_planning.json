@@ -1,0 +1,37 @@
+{
+  "manifest_version": 1,
+  "run_id": "EPIC0-TEST-RUN",
+  "created_at": "2026-01-30T04:30:28.928736Z",
+  "updated_at": "2026-01-30T04:30:29.738742Z",
+  "status": {
+    "phase": "PROMPTS",
+    "state": "NOT_STARTED"
+  },
+  "inputs": {
+    "paths": {
+      "script": "tests/fixtures/script.txt",
+      "audio": "tests/fixtures/audio.mp3",
+      "bible": "tests/fixtures/bible.md"
+    },
+    "hashes": {
+      "script": "d326bf82ac6b1855fd0aabeb6c6607515ec4f3f00bad938f0b1a7e0b710f6507",
+      "audio": "5cf38b5671dbf07470e7fd3c6175d5a9b47718e58bd2bdf9b0fa64148c99900a",
+      "bible": "a2836164688d2fb5ca306bc98febf9194dba59ec3615b59c82a333bb3b56e392"
+    },
+    "frozen_paths": {
+      "script": "artifacts/EPIC0-TEST-RUN/inputs/script.txt",
+      "audio": "artifacts/EPIC0-TEST-RUN/inputs/voiceover.mp3",
+      "bible": "artifacts/EPIC0-TEST-RUN/inputs/bible.md"
+    }
+  },
+  "config_snapshot": {
+    "veo_duration": 8.0,
+    "max_rerenders": 3
+  },
+  "artifacts_dir": "artifacts/EPIC0-TEST-RUN",
+  "completed_phases": [
+    "INGEST",
+    "PLANNING"
+  ],
+  "errors": []
+}

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 1,
+  "run_id": "RUN-STRICT",
+  "created_at": "2026-01-30T19:10:45.964774Z",
+  "updated_at": "2026-01-30T19:10:49.273510Z",
+  "status": {
+    "phase": "FRAMES",
+    "state": "NOT_STARTED"
+  },
+  "inputs": {
+    "paths": {
+      "script": "/home/roiky/Espacio/FinanceVideoPlatform/artifacts/RUN-7066/inputs/script.txt",
+      "audio": "/home/roiky/Espacio/FinanceVideoPlatform/artifacts/RUN-7066/inputs/voiceover.mp3",
+      "bible": "/home/roiky/Espacio/FinanceVideoPlatform/artifacts/RUN-7066/inputs/bible.md"
+    },
+    "hashes": {
+      "script": "85f03822e871847a69fa2566a5c7fbda63a923a8d7ad9c108ab89a178916939e",
+      "audio": "dea16d5ca525846ef73d033e276db3b6628c02b1a83968025aea93656b6cb2ce",
+      "bible": "d4ef53c3ccf18561cf89b1768f7e2a2980e4736edba9c8f16eb9af92a1eb3e5a"
+    },
+    "frozen_paths": {
+      "script": "artifacts/RUN-STRICT/inputs/script.txt",
+      "audio": "artifacts/RUN-STRICT/inputs/voiceover.mp3",
+      "bible": "artifacts/RUN-STRICT/inputs/bible.md"
+    }
+  },
+  "config_snapshot": {
+    "veo_duration": 8.0,
+    "max_rerenders": 3
+  },
+  "artifacts_dir": "artifacts/RUN-STRICT",
+  "completed_phases": [
+    "INGEST",
+    "PLANNING",
+    "PROMPTS"
+  ],
+  "errors": []
+}
