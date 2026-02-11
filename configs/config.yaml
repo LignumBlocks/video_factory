@@ -1,24 +1,14 @@
-# FinanceVideoPlatform Global Configuration
-
 paths:
-  artifacts_root: "artifacts"
+  artifacts_root: "runs"
   logs_root: "logs"
 
 params:
-  # General limits
   max_rerenders: 3
-  
-  # Veo 3.1 specifics
   veo_duration_seconds: 8.0
   usable_cut_seconds: 4.0
-  
-  # Planning
   min_beat_duration_s: 2.0
   max_beat_duration_s: 12.0
-  
-  # Image Generation
   default_image_aspect_ratio: "16:9"
-  default_resolution: "1K" # 1K, 2K, 4K, 8K
   img2img_strength_default: 0.75
 
 toggles:

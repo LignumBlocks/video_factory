@@ -1,0 +1,56 @@
+schema_version: "1.0"
+menu_id: "clean_score_jump_v1"
+shot_types:
+  - id: "SCORE_JUMP"
+    description: "Momento de subida de score: energía concentrada, 'surge' limpio dentro de sistema cerrado."
+    allowed:
+      energy: ["high", "med"]
+      camera: ["locked", "slow_push"]
+    constraints:
+      allow_amber: false
+      allow_particles: true
+      allow_text_like_shapes: false
+    prompt_hints:
+      visuals:
+        - "energy surge inside a closed system"
+        - "score increase moment expressed abstractly"
+      motion:
+        - "smooth controlled motion"
+      composition:
+        - "center-focused, minimal clutter"
+
+  - id: "UNLOCK_REVEAL"
+    description: "Revelación de 'unlock': único lugar donde se permite 'amber' (si biblia lo define)."
+    allowed:
+      energy: ["med", "high"]
+      camera: ["locked", "slow_orbit"]
+    constraints:
+      allow_amber: true
+      allow_particles: true
+      allow_text_like_shapes: false
+    prompt_hints:
+      visuals:
+        - "unlock moment with subtle reveal"
+        - "amber accent allowed only here"
+      motion:
+        - "slow orbit or slow push"
+      composition:
+        - "clean silhouette-like shapes (non-human)"
+
+  - id: "CIRCUIT_FLOW"
+    description: "Flujo de circuito/fluido abstracto dentro de contenedor sellado (no leaks)."
+    allowed:
+      energy: ["low", "med"]
+      camera: ["locked"]
+    constraints:
+      allow_amber: false
+      allow_particles: false
+      allow_text_like_shapes: false
+    prompt_hints:
+      visuals:
+        - "closed-loop circuit flow"
+        - "sealed container, no spilling"
+      motion:
+        - "gentle flow"
+      composition:
+        - "macro detail, glossy surfaces"

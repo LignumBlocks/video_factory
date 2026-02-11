@@ -1,2 +1,0 @@
-# Style Bible
-STATUS: LOCKED

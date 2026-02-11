@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "videofactory"
+version = "0.1.0"
+authors = [
+  { name="FinanceVideoPlatform Team", email="dev@example.com" },
+]
+description = "Finance Video Generation Platform"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "pydantic",
+    "requests",
+    "tenacity",
+    "python-dotenv",
+    "PyYAML",
+    "mutagen"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/example/videofactory"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --ignore=runs"
+testpaths = [
+    "tests",
+]
+python_files = "test_*.py"

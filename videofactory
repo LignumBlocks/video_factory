@@ -1,0 +1,13 @@
+#!/bin/bash
+# Wrapper for FinanceVideoPlatform CLI
+
+# Ensure we are in the project root
+cd "$(dirname "$0")"
+
+# Execute inside venv
+if [ -f "venv/bin/python3" ]; then
+    ./venv/bin/python3 main.py "$@"
+else
+    echo "Error: Virtual environment not found in venv/"
+    exit 1
+fi

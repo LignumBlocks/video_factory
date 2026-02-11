@@ -1,2 +1,0 @@
-{"beat_id":"B001","vo_summary":"Hello world.","vo_span":[0,13],"verb":"TRACE","state":"NOISY","layer":"Evidence","intensity":"L2","amber_allowed":false}
-{"beat_id":"B002","vo_summary":"This is a test script.","vo_span":[13,36],"verb":"UNLOCK","state":"UNLOCKED","layer":"Micro","intensity":"L3","amber_allowed":true}

@@ -1,0 +1,69 @@
+schema_version: "1.0"
+
+run_mode_defaults:
+  duration_s_default: 8
+  duration_policy: "fixed"   # fixed | variable (variable requiere CR)
+  edit_window_s_default: 4   # tramo usable del clip para rough cut
+
+durations:
+  clip_min_s: 8
+  clip_max_s: 8
+  enforce_exact: true
+
+guardrails:
+  required_negative_terms:
+    - "humans"
+    - "hands"
+    - "faces"
+    - "text"
+    - "letters"
+    - "numbers"
+    - "logos"
+    - "watermark"
+    - "signage"
+    - "qr code"
+  forbidden_prompt_terms:
+    - "add text"
+    - "show text"
+    - "caption"
+    - "subtitle"
+    - "logo"
+    - "brand name"
+  amber_rule:
+    enabled: true
+    allowed_only_in_shot_types: ["UNLOCK_REVEAL"]
+  closed_system_rule:
+    enabled: true
+    enforce_terms:
+      - "closed system"
+      - "sealed"
+      - "no leaks"
+
+models:
+  video:
+    target: "veo"
+    fps: 30
+    aspect_ratio: "9:16"
+    duration_s: 8
+  init_frame:
+    enabled: true
+    target: "nanobanana"
+
+agent_settings:
+  beat_segmenter:
+    provider: "openai"
+    model: "gpt-4.1-mini"
+    temperature: 0.2
+    max_tokens: 1200
+  visual_planner:
+    provider: "openai"
+    model: "gpt-4.1-mini"
+    temperature: 0.3
+    max_tokens: 1400
+  prompt_builder:
+    provider: "openai"
+    model: "gpt-4.1-mini"
+    temperature: 0.2
+    max_tokens: 1600
+  prompt_sanitizer:
+    mode: "rules_first"   # rules_first | llm_assisted (llm_assisted requiere CR)

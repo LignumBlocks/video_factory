@@ -74,3 +74,13 @@ Thumbs.db
 *.tar.gz
 *.rar
 src/ui.zip
+
+# Runs Artifacts explicitly ignored (if not already covered by runs/)
+*.pk
+*.mp4
+*.wav
+*.mp3
+*.png
+*.jpg
+!dummy_vo.mp3
+

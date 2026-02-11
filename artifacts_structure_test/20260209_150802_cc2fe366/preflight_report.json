@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "script_valid",
+      "passed": true,
+      "detail": "size=21 bytes"
+    },
+    {
+      "name": "voiceover_valid",
+      "passed": true,
+      "detail": "duration_s=741.72"
+    },
+    {
+      "name": "bible_locked",
+      "passed": true,
+      "detail": "Found LOCKED marker"
+    }
+  ],
+  "run_id": "20260209_150802_cc2fe366"
+}
