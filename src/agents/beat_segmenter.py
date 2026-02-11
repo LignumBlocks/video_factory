@@ -132,15 +132,49 @@ class BeatSegmenterAgent:
         except Exception as e:
             logger.warning(f"Could not save normalized artifacts: {e}")
 
-        # Numbered script for LLM is based on NARRABLE lines
-        numbered_script = "\n".join([f"{i+1}: {line}" for i, line in enumerate(narrable_lines)])
+        # Step A.1: Create Chunks (T-104)
+        chunks = self._create_chunks(narrable_lines, markers)
+        logger.info(f"Script split into {len(chunks)} chunks for processing.")
         
-        # Step A.1: Calculate Dynamic Limits (based on narrable text)
-        narrable_text_block = "\n".join(narrable_lines)
-        min_b, max_b = self._calculate_dynamic_limits(narrable_text_block)
+        all_llm_beats = []
+        global_beat_order = 1
         
-        # Step B: LLM Request
-        llm_beats = self._get_segmentation_from_llm(run_id, numbered_script, min_b, max_b, bible_text)
+        for i, chunk in enumerate(chunks):
+            chunk_lines = chunk['lines']
+            offset = chunk['offset']
+            
+            logger.info(f"Processing Chunk {i+1}/{len(chunks)}: Lines {offset+1}-{offset+len(chunk_lines)}")
+            
+            # Numbered script relative to chunk
+            numbered_script = "\n".join([f"{i+1}: {line}" for i, line in enumerate(chunk_lines)])
+            
+            # Dynamic limits for chunk
+            chunk_text = "\n".join(chunk_lines)
+            c_min, c_max = self._calculate_dynamic_limits(chunk_text)
+            
+            # Call LLM
+            try:
+                chunk_beats = self._get_segmentation_from_llm(run_id, numbered_script, c_min, c_max, bible_text)
+            except Exception as e:
+                logger.error(f"FAILED Processing Chunk {i+1}: {e}", exc_info=True)
+                raise e
+            
+            # Adjust and collect
+            for b in chunk_beats:
+                b.line_start += offset
+                b.line_end += offset
+                b.order = global_beat_order # Force sequential order
+                global_beat_order += 1
+                all_llm_beats.append(b)
+                
+        # Calculate Global Limits for Validation
+        full_text = "\n".join(narrable_lines)
+        min_b, max_b = self._calculate_dynamic_limits(full_text)
+        
+        # Step C: Post-process (Global)
+        # Pass NARRABLE lines as the source of truth
+        llm_beats = all_llm_beats # Rename for compatibility
+
         
         # Step C: Post-process
         # Pass NARRABLE lines as the source of truth
@@ -165,8 +199,10 @@ class BeatSegmenterAgent:
         target_beats = max(1, int(estimated_duration / self.target_beat_duration))
         
         # Safety Margins (+/- 20% or default minimums)
-        min_beats = max(self.min_beats_default, int(target_beats * 0.8))
-        max_beats = max(self.max_beats_default, int(target_beats * 1.2))
+        # T-104: Relaxed minimum to 0.4 (40%) to allow LLM to group ideas.
+        # Strict duration limits are enforced in post-processing (_split_long_beats).
+        min_beats = max(1, int(target_beats * 0.4))
+        max_beats = max(self.max_beats_default, int(target_beats * 1.5))
         
         logger.info(f"Dynamic Beat Sizing: {words} words -> ~{estimated_duration:.1f}s -> Target {target_beats} beats -> Range [{min_beats}, {max_beats}]")
         return min_beats, max_beats
@@ -287,7 +323,7 @@ class BeatSegmenterAgent:
             run_id=run_id,
             step_name="BEAT_SEGMENTER",
             max_tokens=12000, # Increased for long scripts (150+ beats)
-            timeout_s=300.0   # Significantly increased for long generation time
+            timeout_s=600.0   # Significantly increased for long generation time
         )
 
         response = self.llm.generate_json(req)
@@ -690,3 +726,73 @@ class BeatSegmenterAgent:
                         warnings.append(f"Created end gap beat for lines {last_end+1}-{len(lines)}")
 
         return filled_beats, warnings
+    def _create_chunks(self, narrable_lines: List[str], markers: List[Dict]) -> List[Dict]:
+        """
+        Split narrable lines into chunks (T-104), respecting structural boundaries if possible.
+        """
+        chunks = []
+        current_chunk_lines = []
+        current_chunk_start_index = 0
+        current_word_count = 0
+        target_words = 450  # ~40 beats per chunk (Safe for timeout)
+        
+        # Map narrative index -> structural marker presence (AFTER this line)
+        # We want to split AFTER a line if a marker exists there.
+        # marker['applies_after_narrable_index'] = i means marker is between line i and i+1
+        split_points = {m['applies_after_narrable_index'] for m in markers if m['marker_type'] in ['SECTION', 'SEPARATOR']}
+        
+        for i, line in enumerate(narrable_lines):
+            # clean word count
+            words = len(re.sub(r'[#*]', '', line).split())
+            current_chunk_lines.append(line)
+            current_word_count += words
+            
+            # Check for split
+            # 1. Must be at least meaningful size (e.g. > 50 words) to avoid tiny separate chunks
+            # 2. If word count > target, FORCE split
+            # 3. If word count > target * 0.7 AND we are at a structural boundary, PREFER split
+            
+            should_split = False
+            
+            # Condition A: Hard Limit (prevent massive chunks)
+            if current_word_count >= target_words:
+                should_split = True
+                
+            # Condition B: Structural Opportunity (soft limit)
+            elif current_word_count >= (target_words * 0.6) and i in split_points:
+                should_split = True
+                
+            # Check end of script
+            if i == len(narrable_lines) - 1:
+                should_split = True
+                
+            if should_split:
+                chunks.append({
+                    "lines": current_chunk_lines,
+                    "global_start_index": current_chunk_start_index + 1, # 1-based for display
+                    "offset": current_chunk_start_index # 0-based for indexing
+                })
+                # Reset
+                current_chunk_lines = []
+                current_chunk_start_index = i + 1
+                current_word_count = 0
+                
+        return chunks
+
+    def _merge_chunk_beats(self, chunk_results: List[List[Beat]]) -> List[Beat]:
+        """Merge beats from multiple chunks into a single list."""
+        final_beats = []
+        for beats in chunk_results:
+            final_beats.extend(beats)
+        
+        # Renumber will happen in post-process, but we need to ensure beat_ids are unique temporarily?
+        # Actually _post_process is called PER CHUNK or globally?
+        # Better design: Call LLM per chunk, get BeatLLMResponse objects.
+        # Then flatten BeatLLMResponse list.
+        # THEN call _post_process ONCE on the full set?
+        # Problem: _post_process expects `order` to be sequential 1..N.
+        # But chunks will each return 1..M.
+        # So we must adjust `order` and `line_start/line_end` before merging?
+        # YES.
+        
+        return final_beats # Placeholder, logic moved to segment_script
